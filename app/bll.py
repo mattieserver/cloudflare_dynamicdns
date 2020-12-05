@@ -8,25 +8,33 @@ class ConfigData:
         configFilePath = path
         cp.read(configFilePath)
 
-        self.name = cp.get(config, 'name')
-        self.email= cp.get(config, 'email')
-        self.key = cp.get(config, 'key')
+        self.zone_name = cp.get(config, 'zone_name')
+        self.api_token = cp.get(config, 'api_token')
         self.interval = int(cp.get(config, 'interval'))
+        self.fqdn = cp.get(config, 'fqdn')  
 
 class ip:
     def __init__(self, name):
         self.current_ip = requests.get('https://api.ipify.org?format=json').json()["ip"]
-        self.dns_ip = socket.gethostbyname(name)  
 
-def updateIP(email, key, name, ip):
+def updateIP( api_token, zone_name, fqdn, ip):
 
-    head = {'X-Auth-Email': email, 'X-Auth-Key': key}
-    zone_id = requests.get("https://api.cloudflare.com/client/v4/zones?name=" + name, headers=head).json()['result'][0]['id']
+    head = {'Authorization': 'Bearer ' + api_token}
+
+    zone_id = requests.get("https://api.cloudflare.com/client/v4/zones?name=" + zone_name, headers=head).json()['result'][0]['id']
         
-    dns_records = requests.get("https://api.cloudflare.com/client/v4/zones/" + zone_id + "/dns_records", headers=head).json()['result']
+    dns_record = requests.get("https://api.cloudflare.com/client/v4/zones/" + zone_id + "/dns_records?type=A&name=" +  fqdn, headers=head).json()['result']
     
-    for record in dns_records:
-        if record['type'] == 'A' and record['name'] == name:
-            data = {'type':record['type'],'name':record['name'],'content':ip,'ttl':record['ttl'],'proxied':record['proxied']}
-            update_record = requests.put("https://api.cloudflare.com/client/v4/zones/" + zone_id + "/dns_records/"+ record["id"], headers=head, json=data).json()
+    for record in dns_record:
+        if record['type'] == 'A' and record['name'] == fqdn:
+            if record["content"] != ip:
+                print("IP does not match, current ip: {} - cloudflare ip: {}".format(ip, record["content"]))
 
+                data = {'type':'A', 'name': fqdn, 'content': ip, 'ttl': record['ttl'], 'proxied': record['proxied']}
+                update_record = requests.put("https://api.cloudflare.com/client/v4/zones/" + zone_id + "/dns_records/"+ record["id"], headers=head, json=data).json()
+                if update_record["success"] == True:
+                    print("Updated cloudflare")
+                else:
+                    print("Failed to update cloudflare")
+            else:
+                print("IP does match, current ip: {}".format(ip))

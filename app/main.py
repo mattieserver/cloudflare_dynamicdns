@@ -1,12 +1,12 @@
 import time
 import bll
 
-configData = bll.ConfigData('./config.cfg', 'main-config')
+configData = bll.ConfigData('config.cfg', 'main-config')
 
 while True:
-    ip = bll.ip(configData.name)
+    ip = bll.ip(configData.fqdn)
 
-    if ip.current_ip != ip.dns_ip:
-        bll.updateIP(configData.email, configData.key, configData.name, ip.current_ip)
+    bll.updateIP(configData.api_token, configData.zone_name, configData.fqdn, ip.current_ip)
+    print("Sleeping for {} seconds".format(configData.interval))
 
     time.sleep(configData.interval)
