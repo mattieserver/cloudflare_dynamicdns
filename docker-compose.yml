@@ -1,6 +1,6 @@
 version: '3'
 
 services:
-        dynamic_dns:
-                build: .
-                restart: always
+  dynamic_dns:
+    image: mattie/cloudflare_dynamicdns
+    restart: always
